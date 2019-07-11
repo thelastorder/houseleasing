@@ -2,6 +2,7 @@ package com.mokelock.houseleasing.services.servicesImpl;
 
 import com.mokelock.houseleasing.Cipher.Ciphers;
 import com.mokelock.houseleasing.Cipher.CiphersImpl.CiphersImpl;
+import com.mokelock.houseleasing.IPFS.File_Read_Test;
 import com.mokelock.houseleasing.IPFS.IPFS_SERVICE;
 import com.mokelock.houseleasing.IPFS.IpfsImpl.IPFS_SERVICE_IMPL;
 import com.mokelock.houseleasing.IPFS.Table;
@@ -32,7 +33,7 @@ import javax.annotation.Resource;
 @Service
 public class UserServicesImpl implements UserService {
 
-    private static final int User_Account_TYPE = 1;
+    private static final int User_Account_TYPE = 0;
     private static String path = System.getProperty("user.dir") + "\\src\\main\\file\\id";//身份证文件下载和上传路径
     private static String tablepath =  System.getProperty("user.dir") + "\\src\\main\\file\\table";
     //private static String SK = "";
@@ -51,7 +52,7 @@ public class UserServicesImpl implements UserService {
     private String adminFilePath = "E:\\Geth\\data\\keystore\\UTC--2019-07-09T00-53-06.868496100Z--7d8b423d21b1e682063665b4fa99df5d04874c48";
 //    private static String adminFilePath = "N:\\geth\\data\\keystore\\UTC--2019-07-06T05-37-21.279150600Z--1f3ff30f01ec45eb10a6c5613aaf33224b40d0b0";
     private static final int InitialCredit = 10;
-    private static final int InitialGive = 100;
+    private static final int InitialGive = 10000000;
     @Resource
     private UserDao userDao;
 
@@ -92,7 +93,10 @@ public class UserServicesImpl implements UserService {
                 String account = (String) map.get("ethAddress");
                 String ethPath = (String) map.get("ethPath");
                 Table table = new TableImpl();
-                table.insert(_username, account, ethPath, tablepath + "\\" + oneTable);
+                System.out.println("before insert " + _username + account + ethPath);
+                String tempPath = System.getProperty("user.dir") + "\\src\\main\\file\\table\\onetable.txt";
+                System.out.println("tempPath is " + tempPath);
+
 
                 postAccount(account, InitialGive);
 
@@ -121,6 +125,8 @@ public class UserServicesImpl implements UserService {
                 }
                 fis.close();
                 fos.close();
+
+
                 /*
                 String _json =" { ";
                 _json += "\""+"username"+"\""+":"+"\""+_username+"\", ";
@@ -142,9 +148,19 @@ public class UserServicesImpl implements UserService {
                 fos.close();
                 */
 
+                System.out.println("length is " + new File("E:\\houseleasing\\houseleasing\\src\\main\\file\\table\\onetable.txt").length());
+
+                System.out.println("length before is " + new File("E:\\houseleasing\\houseleasing\\src\\main\\file" +
+                        "\\table\\onetable.txt").length());
+                table.insert(_username, account, ethPath, tempPath);
+                System.out.println("length after is " + new File("E:\\houseleasing\\houseleasing\\src\\main\\file" +
+                        "\\table\\onetable.txt").length());
+
                 //把身份证照片的文件夹传到IPFS
                 String is = IPFS_SERVICE_IMPL.upload(path);
                 String new_table = IPFS_SERVICE_IMPL.upload(tablepath+"\\"+oneTable);
+                System.out.println("is is " + is);
+                System.out.println("new_table is " + new_table);
                 //把哈希值传给以太坊
                 //bc.changeHashInfo(account,is);
 
@@ -159,6 +175,10 @@ public class UserServicesImpl implements UserService {
                 String id_hash = ci.encryHASH(_id);
                 bc.addUser(account, ethPath, pay_password, _username, id_hash, is, phone, _gender, InitialCredit);
                 bc.changeTable(User_Account_TYPE,new_table);
+
+                pro_a.delete();
+                pro_b.delete();
+
                 return true;
             } else {
                 System.out.println("the user has exists");
@@ -295,6 +315,25 @@ public class UserServicesImpl implements UserService {
 
     }
 
+    @Override
+    public boolean postAccountByusername(String _username,int money)
+    {
+        try {
+            BlockChain bc = new BlockChain();
+            String account = findAccount(_username);
+            System.out.println(account);
+            bc.transaction(adminEthPassword, adminFilePath, account);
+            return true;
+
+        } catch (Exception e) {
+            System.out.println("postAccount() is error");
+        } finally {
+            return false;
+        }
+
+
+    }
+
 
     //*********
     //已完成
@@ -309,7 +348,7 @@ public class UserServicesImpl implements UserService {
             BlockChain bc = new BlockChain();
 
 
-            String orders = bc.findOrders(account, ethFile, pay_password);
+            JSONArray orders = bc.findOrders(account, ethFile, pay_password);
             ArrayList<record> ars = readRecords(orders);
             for (int i = 0; i < ars.size(); i++) {
                 alr.add(new front_record(ars.get(i)));
@@ -723,11 +762,11 @@ public class UserServicesImpl implements UserService {
         return user;
     }
 
-    private ArrayList<record> readRecords(String records) {
-        JSONArray ja = JSONArray.parseArray(records);
+    private ArrayList<record> readRecords(JSONArray records) {
+        //JSONArray ja = JSONArray.parseArray(records);
         ArrayList<record> alr = new ArrayList<record>();
-        for (int i = 0; i < ja.size(); i++) {
-            record record = (record) ja.get(i);
+        for (int i = 0; i < records.size(); i++) {
+            record record = (record) records.get(i);
             alr.add(record);
         }
         return alr;

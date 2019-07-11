@@ -9,15 +9,21 @@ import java.util.Map;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.mokelock.houseleasing.IPFS.IPFS_SERVICE;
+import com.mokelock.houseleasing.IPFS.IpfsImpl.IPFS_SERVICE_IMPL;
 import com.mokelock.houseleasing.IPFS.Table;
 import com.mokelock.houseleasing.IPFS.TableImpl.TableImpl;
 import com.mokelock.houseleasing.blockchain.BlockChain;
 import com.mokelock.houseleasing.services.tools_face_recog.*;
 import java.util.*;
 import com.mokelock.houseleasing.services.FaceService;
+import org.springframework.stereotype.Service;
 
 import java.io.*;
+
+@Service
 public class FaceServiceImpl implements FaceService{
+    private BlockChain bc=new BlockChain();
+    private Table table=new TableImpl();
     private static String getAuth() {
         // 官网获取的 API Key 更新为你注册的
         String clientId = "GUImyl9U9ORVQiqWXBPYLQFB";
@@ -74,8 +80,20 @@ public class FaceServiceImpl implements FaceService{
         }
         return null;
     }
-    public String match(File get_pic,String name,String eth_File,String ethPassword) {
+    public String match(File get_pic,String name,String ethPassword) {
         // 请求url
+        String hash1=bc.getHash(0);
+        String path1=System.getProperty("user.dir") + "\\src\\main\\file\\"+hash1+"\\user.txt";
+        try{
+            IPFS_SERVICE_IMPL.download(path1,hash1,"");
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+        String[]key_for_search1={"user_name"};
+        String[]value_for_search1={name};
+        String[]key_to_get1={"sk"};
+        ArrayList<String[]>v=table.query(key_for_search1,value_for_search1,key_to_get1,path1);
+        String eth_File=v.get(0)[0];
         BlockChain bc=new BlockChain();
         String url = "https://aip.baidubce.com/rest/2.0/face/v3/match";
         try {
@@ -126,7 +144,8 @@ public class FaceServiceImpl implements FaceService{
 
             String result = HttpUtil.post(url, accessToken, "application/json", param);
             System.out.println(result);
-            return result;
+            JSONObject jsonObject1 = JSON.parseObject(result);
+            return jsonObject1.getString("score");
         } catch (Exception e) {
             e.printStackTrace();
         }

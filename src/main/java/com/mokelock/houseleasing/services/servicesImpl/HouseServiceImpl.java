@@ -104,6 +104,7 @@ public class HouseServiceImpl implements HouseService {
 
         //得到满足条件的房子的信息
         JSONArray house_comment = new JSONArray();
+        int commentpic = 0;
         ArrayList<String[]> detailedHouse = dhtable.query(key_for_search, value_to_search, key_to_get, info.getPath());
         if(dhl.length - piccount > 1){
             ArrayList<String[]> houseComment = dhtable.get_all(key_to_getComment, comment.getPath());
@@ -111,8 +112,9 @@ public class HouseServiceImpl implements HouseService {
             HouseComment singleHouseComment;
             for(int i = 0 ;i < houseComment.size() ;i++){
                 singleHouseComment = new HouseComment(houseComment.get(i)[0],houseComment.get(i)[1],
-                        (houseComment.get(i)[2].substring(1,houseComment.get(i)[2].length())).split(","));
+                        (houseComment.get(i)[2].substring(1,houseComment.get(i)[2].length()-1)).split(","));
                 house_comment.add(singleHouseComment.HCtoJson());
+                commentpic += (houseComment.get(i)[2].substring(1,houseComment.get(i)[2].length()-1)).split(",").length;
             }
             comment.delete();
         }
@@ -120,8 +122,8 @@ public class HouseServiceImpl implements HouseService {
         info.delete();
 
         //存放得到的房子的图片
-        String[] house_pic = new String[piccount];
-        for(int i = 0; i < piccount ; i++){
+        String[] house_pic = new String[piccount-commentpic];
+        for(int i = 0; i < piccount-commentpic ; i++){
             String s = String.valueOf(i);
             File pic = new File(dirdh,s+".jpg");
             house_pic[i] = house_hash + "/" + s + ".jpg";
@@ -224,10 +226,10 @@ public class HouseServiceImpl implements HouseService {
         }else if(lease_type.equals("0")){
             valued.add(6,0);
         }
-        if(!(String.valueOf(elevator)).equals("0")){
+        if(!(String.valueOf(elevator)).equals("false")){
             valued.add(7,1);
             count++;
-        }else if((String.valueOf(elevator)).equals("0")){
+        }else if((String.valueOf(elevator)).equals("false")){
             valued.add(7,0);
         }
         /*******************************************************************************************/
@@ -362,6 +364,8 @@ public class HouseServiceImpl implements HouseService {
             dirdh.mkdir();
         }
 
+        System.out.println(1);
+
         //定义三个表的路径
         File ueu = new File(System.getProperty("user.dir")+"\\src\\main\\file\\U_EthU.txt");
         File fht1 = new File(System.getProperty("user.dir")+"\\src\\main\\file\\housetable1.txt");
@@ -381,6 +385,7 @@ public class HouseServiceImpl implements HouseService {
         } catch (IOException e) {
             e.printStackTrace();
         }
+        System.out.println(2);
 
         //查找用户姓名和身份证号所需要的
         String[] key_for_search_u = {"user_name"};
@@ -393,14 +398,19 @@ public class HouseServiceImpl implements HouseService {
         ArrayList<String[]> id2 = forInsertHouse.query(key_for_search_get,value_for_search,key_for_search_get,fht2.getPath());
 
 
+        System.out.println(3);
         if(id1.size() != 0 || id2.size() != 0 || fut.size() == 0){
             //Response failRes = new Response(200,"fail");
             //toReturn = failRes.RestoJson2();
         }else if(id1.size() == 0 && id2.size() == 0 && fut.size() != 0){
-            JSONObject u = JSONObject.parseObject(bc.getMessage(fut.get(0)[0],fut.get(0)[1],ethPassword));
+            System.out.println("ownername is " + user);
+            JSONObject u = bc.getMessage3(fut.get(0)[0],fut.get(0)[1],ethPassword);
+            System.out.println(u.toJSONString());
+            System.out.println("house_id in service is " + house_id);
             insertHouse.setHouse_id_hash(enId.encryHASH(house_id));
             insertHouse.setOwner_id(u.getString("id"));
             insertHouse.setOwner_name(u.getString("username"));
+            System.out.println("username before insertHouse is " + insertHouse.getOwner_name());
             insertHouse.setOwner(user);
             insertHouse.setRole(0);
             insertHouse.setState(state);
@@ -419,6 +429,9 @@ public class HouseServiceImpl implements HouseService {
             insertHouse.setLon(lon);
             insertHouse.setAccessory(accessory);
 
+            System.out.println("insertHosue is \n" + insertHouse.toString());
+
+            System.out.println(4);
             int lease_inter;
             if(lease < 500){
                 lease_inter = 1;
@@ -443,6 +456,7 @@ public class HouseServiceImpl implements HouseService {
             forInsertHouse.insert_into_more_info(insertHouse,info.getPath());
             //System.out.println(info.getPath());
             //将房子的图片放入文件夹中
+            System.out.println(5);
             File[] pic = new File[house_pic.length];
             for(int i = 0; i< pic.length ; i++){
                 String s = String.valueOf(i);
@@ -462,6 +476,7 @@ public class HouseServiceImpl implements HouseService {
                     e.printStackTrace();
                 }
             }
+            System.out.println(6);
             //存放所有图片的hash值
             String[] pic_hash = new String[house_pic.length];
             String[] pic_to_show = new String[house_pic.length];
@@ -474,7 +489,7 @@ public class HouseServiceImpl implements HouseService {
                     pic_to_show[i] = house_hash + "/" + s + ".jpg";
                     //pic[i].delete();
                 }
-
+                System.out.println(7);
                 insertHouse.setHouse_pic(pic_to_show);
                 info.delete();
                 for(int i = 0;i < pic.length;i++){
@@ -498,6 +513,7 @@ public class HouseServiceImpl implements HouseService {
                 e.printStackTrace();
             }
         }
+        System.out.println(8);
         return insertHouse.HtoJson();
     }
 

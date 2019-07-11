@@ -6,6 +6,7 @@ import com.alibaba.fastjson.JSONObject;
 import com.mokelock.houseleasing.model.HouseModel.House;
 import com.mokelock.houseleasing.model.UserModel.User;
 import com.mokelock.houseleasing.model.UserModel.UserTemp;
+import com.mokelock.houseleasing.services.FaceService;
 import com.mokelock.houseleasing.services.UserService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,7 +14,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.multipart.MultipartHttpServletRequest;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
@@ -31,6 +31,9 @@ public class UserController {
 
     @Resource
     private UserService userService;
+
+    @Resource
+    private FaceService faceService;
 
     /**
      * 用户登录
@@ -94,10 +97,11 @@ public class UserController {
                 user.getName(), user.getPhone(), excelFile, excelFile1, user.getId(), new Byte(user.getGender()));
         logger.info("result is " + result);
         if (!result) {
-            logger.debug("register failed");
+            logger.info("register failed");
             response.setStatus(202);
         } else {
-            logger.debug(user.toString());
+            response.setStatus(200);
+            logger.info(user.toString());
         }
         if (excelFile.exists()) {
             excelFile.delete();
@@ -157,12 +161,12 @@ public class UserController {
         if (username == null) {
             username = (String) session.getAttribute("username");
         }
-        if (session.getAttribute("payPassword") == null) {
+        if (session.getAttribute("payPass") == null) {
             response.setStatus(201);
             return null;
         }
         logger.debug("/user/user " + username);
-        return userService.getUser(username, (String) session.getAttribute("payPassword"));
+        return userService.getUser(username, (String) session.getAttribute("payPass"));
     }
 
     /**
@@ -177,13 +181,13 @@ public class UserController {
         if (username == null) {
             username = (String) session.getAttribute("username");
         }
-        if (session.getAttribute("payPassword") == null) {
+        if (session.getAttribute("payPass") == null) {
             response.setStatus(201);
             return null;
         }
         User user = new User();
         int balance = userService.getBalance(username);
-        user = userService.getUser(username, (String) session.getAttribute("payPassword"));
+        user = userService.getUser(username, (String) session.getAttribute("payPass"));
         JSONObject json = new JSONObject();
         json.put("username", username);
         json.put("name", user.getName());
@@ -205,7 +209,7 @@ public class UserController {
         if (username == null) {
             username = (String) session.getAttribute("username");
         }
-        if (session.getAttribute("payPassword") == null) {
+        if (session.getAttribute("payPass") == null) {
             response.setStatus(201);
             return null;
         }
@@ -214,7 +218,7 @@ public class UserController {
         if (result) {
             User user = new User();
             int balance = userService.getBalance(username);
-            user = userService.getUser(username, (String) session.getAttribute("payPassword"));
+            user = userService.getUser(username, (String) session.getAttribute("payPass"));
             json.put("username", username);
             json.put("name", user.getName());
             json.put("balance", balance);
@@ -249,11 +253,11 @@ public class UserController {
         if (username == null) {
             username = (String) session.getAttribute("username");
         }
-        if (session.getAttribute("payPassword") == null) {
+        if (session.getAttribute("payPass") == null) {
             response.setStatus(201);
             return null;
         }
-        return userService.getRecords(username, (String) session.getAttribute("payPassword"));
+        return userService.getRecords(username, (String) session.getAttribute("payPass"));
     }
 
     /**
@@ -295,11 +299,11 @@ public class UserController {
         if (username == null) {
             username = (String) session.getAttribute("username");
         }
-        if (session.getAttribute("payPassword") == null) {
+        if (session.getAttribute("payPass") == null) {
             response.setStatus(201);
             return false;
         }
-        return userService.postPhone(username, password, (String) session.getAttribute("payPassword"), phone);
+        return userService.postPhone(username, password, (String) session.getAttribute("payPass"), phone);
     }
 
     /**
@@ -312,11 +316,11 @@ public class UserController {
     public String contactOwner(HttpServletRequest request, HttpServletResponse response, String house_hash) {
         HttpSession session = request.getSession();
         String username = (String) session.getAttribute("username");
-        if (session.getAttribute("payPassword") == null) {
+        if (session.getAttribute("payPass") == null) {
             response.setStatus(201);
             return null;
         }
-        return userService.getUser(username, (String) session.getAttribute("payPassword")).getPhone();
+        return userService.getUser(username, (String) session.getAttribute("payPass")).getPhone();
     }
 
     /**
@@ -339,6 +343,30 @@ public class UserController {
     @RequestMapping(value = "/changeinfo", method = RequestMethod.POST)
     public void changeInfo(HttpServletRequest request, HttpServletResponse response, String username, String credit) {
 //        String s = userService.postPhone();
+    }
+
+    @RequestMapping(value = "/check")
+    public void changeInfo(HttpServletRequest request, HttpServletResponse response, MultipartFile face) {
+        HttpSession session = request.getSession();
+        String username = (String) session.getAttribute("username");
+        String ethPassword = (String) session.getAttribute("payPass");
+        logger.info("payPass in setUpHouse is " + ethPassword);
+        if (ethPassword == null) {
+            response.setStatus(201);
+        }
+        String path = System.getProperty("user.dir") + "\\src\\main\\file\\temp\\";
+        File file = new File(path + face.getOriginalFilename());
+        try {
+            face.transferTo(file);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        int score = Integer.parseInt(faceService.match(file, username, ethPassword));
+        if (score > 10) {
+            response.setStatus(200);
+        } else {
+            response.setStatus(203);
+        }
     }
 
 }

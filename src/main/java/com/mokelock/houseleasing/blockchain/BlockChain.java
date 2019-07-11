@@ -1,7 +1,7 @@
 package com.mokelock.houseleasing.blockchain;
 
+import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
-import org.springframework.beans.factory.annotation.Value;
 import org.web3j.abi.FunctionEncoder;
 import org.web3j.abi.TypeReference;
 import org.web3j.abi.datatypes.*;
@@ -16,6 +16,8 @@ import org.web3j.protocol.core.methods.request.Transaction;
 import org.web3j.protocol.core.methods.response.*;
 import org.web3j.protocol.http.HttpService;
 import org.web3j.tuples.generated.Tuple6;
+import org.web3j.tuples.generated.Tuple7;
+import org.web3j.tuples.generated.Tuple8;
 import org.web3j.tx.Transfer;
 import org.web3j.tx.gas.DefaultGasProvider;
 import org.web3j.utils.Convert;
@@ -30,18 +32,18 @@ import java.util.concurrent.ExecutionException;
 
 public class BlockChain {
 
-//    @Value(value = "${BlockChain.url}")
-    private String url = "http://211.87.230.89:9988/";
+    //    @Value(value = "${BlockChain.url}")
+    private String url = "http://211.87.230.20:9988/";
     private Web3j web3j = Web3j.build(new HttpService(url));
-//    @Value(value = "${BlockChain.filePath}")
+    //    @Value(value = "${BlockChain.filePath}")
     private String filePath = "E:\\Geth\\data\\keystore";
-//    @Value(value = "${BlockChain.root.Address")
+    //    @Value(value = "${BlockChain.root.Address")
     private String rootAddress = "0x7d8b423d21b1e682063665b4fa99df5d04874c48";
-//    @Value(value = "${BlockChain,root.Password}")
+    //    @Value(value = "${BlockChain,root.Password}")
     private String rootPassword = "123";
-//    @Value(value = "${BlockChain.root.File}")
+    //    @Value(value = "${BlockChain.root.File}")
     private String rootFile = "E:\\Geth\\data\\keystore\\UTC--2019-07-09T00-53-06.868496100Z--7d8b423d21b1e682063665b4fa99df5d04874c48";
-//    @Value(value = "${BlockChain.contract.address}")
+    //    @Value(value = "${BlockChain.contract.address}")
     private String contractAddress = "0xa0f490e57d4ddf2c5a526d99aea5125fd310466c";
 
     /**
@@ -245,6 +247,32 @@ public class BlockChain {
         jsonObject.put("gender", gender);
         jsonObject.put("credit", credit);
         return jsonObject.toJSONString();
+    }
+    public JSONObject getMessage3(String userAddress, String ethFile, String ethPassword) {
+        House_sol_blockChain houseContract = loadContract(userAddress, ethFile, ethPassword);
+        Tuple6<Utf8String, Utf8String, Utf8String, Utf8String, Uint256, Uint256> tuple6 = null;
+        Address address = new Address(userAddress);
+        try {
+            tuple6 = houseContract.findUser(address).send();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        System.out.println("tuple6 is " + tuple6.toString());
+        Utf8String username = tuple6 != null ? tuple6.getValue1() : null;
+        Utf8String id = tuple6 != null ? tuple6.getValue2() : null;
+        Utf8String IPFS_hash = tuple6 != null ? tuple6.getValue3() : null;
+        Utf8String phone = tuple6 != null ? tuple6.getValue4() : null;
+        Uint256 gender = tuple6 != null ? tuple6.getValue5() : null;
+        Uint256 credit = tuple6 != null ? tuple6.getValue6() : null;
+        JSONObject jsonObject = new JSONObject();
+        jsonObject.put("username", username);
+        jsonObject.put("id", id);
+        jsonObject.put("IPFS_hash", IPFS_hash);
+        jsonObject.put("phone", phone);
+        jsonObject.put("gender", gender);
+        jsonObject.put("credit", credit);
+        System.out.println("json in getMessage3 is " + jsonObject.toJSONString());
+        return jsonObject;
     }
 
     public void getMessage2(String userAddress, String ethFile, String ethPassword) {
@@ -464,6 +492,7 @@ public class BlockChain {
         } catch (Exception e) {
             e.printStackTrace();
         }
+        System.out.println("receipt in changeTable is " + receipt.toString());
     }
 
     /**
@@ -500,19 +529,40 @@ public class BlockChain {
         }
     }
 
-    public String findOrders(String ownerAddress, String ethFile, String ethPassword) {
+    public JSONArray findOrders(String ownerAddress, String ethFile, String ethPassword) {
         House_sol_blockChain houseContract = loadContract(ownerAddress, ethFile, ethPassword);
         Address address = new Address(ownerAddress);
         Uint256 num;
+        Tuple8<Address, Address, Uint256, Uint256, Uint256, Uint256, Uint256, Uint256> tuple8 = null;
+        Tuple7<Uint256, Uint256, Uint256, Uint256, Uint256, Uint256, Utf8String> tuple7 = null;
+        JSONArray jsonArray = new JSONArray();
         try {
             num = houseContract.findOrdersNum(address).send();
             for (int i = Integer.parseInt(num + ""); i > 0; i++) {
-
+                tuple8 = houseContract.findOrder_1(address, new Uint256(i)).send();
+                tuple7 = houseContract.findOrder_2(address, new Uint256(i)).send();
+                JSONObject temp = new JSONObject();
+                temp.put("submiter", tuple8.getValue1().getValue());
+                temp.put("responder", tuple8.getValue2().getValue());
+                temp.put("submiterEthCoin", tuple8.getValue3().getValue());
+                temp.put("aimerEthCoin", tuple8.getValue4().getValue());
+                temp.put("subFirstSign", tuple8.getValue5().getValue());
+                temp.put("resFirstSign", tuple8.getValue6().getValue());
+                temp.put("subSecondSign", tuple8.getValue7().getValue());
+                temp.put("resSecondSign", tuple8.getValue8().getValue());
+                temp.put("sub_time", tuple7.getValue1().getValue());
+                temp.put("effect_time", tuple7.getValue2().getValue());
+                temp.put("finish_time", tuple7.getValue3().getValue());
+                temp.put("role", tuple7.getValue4().getValue());
+                temp.put("state", tuple7.getValue5().getValue());
+                temp.put("money", tuple7.getValue6().getValue());
+                temp.put("house_hash", tuple7.getValue7().getValue());
+                jsonArray.add(temp);
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
-        return "";
+        return jsonArray;
     }
 
     /**
